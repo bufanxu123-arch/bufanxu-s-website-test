@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>test</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=VT323&display=swap');
+
+        :root {
+            --neon-cyan: #00f3ff;
+            --neon-pink: #ff00ff;
+            --neon-yellow: #ffee00;
+            --bg-color: #050505;
+            --panel-bg: rgba(10, 10, 16, 0.8); /* 稍微调低透明度以增强叠加感 */
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg-color);
+            color: #fff;
+            font-family: 'Orbitron', sans-serif;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            /* 开启 3D 透视 */
+            perspective: 1000px; 
+        }
+
+        /* 动态背景网格层 (Parallax Background) */
+        .bg-grid {
+            position: absolute;
+            width: 120vw;
+            height: 120vh;
+            top: -10vh;
+            left: -10vw;
+            background-image: 
+                linear-gradient(rgba(0, 243, 255, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 243, 255, 0.1) 1px, transparent 1px);
+            background-size: 40px 40px;
+            z-index: 0;
+            transform-style: preserve-3d;
+            pointer-events: none;
+        }
+
+        /* 覆盖在最上层的扫描线 */
+        .scanlines {
+            position: fixed;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 10;
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+        }
+
+        .cyber-card {
+            position: relative;
+            width: 90%;
+            max-width: 800px;
+            padding: 40px;
+            background: var(--panel-bg);
+            border: 2px solid var(--neon-cyan);
+            box-shadow: 0 0 30px rgba(0, 243, 255, 0.15);
+            clip-path: polygon(0 0, 100% 0, 100% calc(100% - 30px), calc(100% - 30px) 100%, 0 100%);
+            z-index: 5;
+            text-align: center;
+            backdrop-filter: blur(3px);
+            
+            /* 3D 变换的关键属性 */
+            transform-style: preserve-3d;
+            will-change: transform; /* 性能优化 */
+        }
+
+        /* 动态反光层 (Holographic Glare) */
+        .holo-glare {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255,255,255,0.1) 0%, transparent 50%);
+            z-index: 6;
+            pointer-events: none;
+            mix-blend-mode: overlay;
+        }
+
+        /* 让内部元素也稍微浮起一点 (Z-axis) */
+        .content-layer {
+            transform: translateZ(30px); /* 让文字浮在卡片表面之上 */
+        }
+
+        .corner-decoration {
+            position: absolute;
+            width: 100px; height: 100px;
+            border-top: 4px solid var(--neon-pink);
+            border-left: 4px solid var(--neon-pink);
+            top: -5px; left: -5px;
+            z-index: 7;
+            transform: translateZ(40px); /* 角标浮得更高 */
+        }
+        
+        .corner-decoration::after {
+            content: 'ID: BFX-001';
+            position: absolute; top: 10px; left: 10px;
+            font-size: 0.7rem; color: var(--neon-pink); letter-spacing: 2px;
+        }
+
+        .glitch-title {
+            font-size: 4rem;
+            font-weight: 900;
+            color: #fff;
+            position: relative;
+            text-shadow: 2px 2px var(--neon-pink), -2px -2px var(--neon-cyan);
+            animation: glitch-skew 1s cubic-bezier(0.25, 0.46, 0.45, 0.94) both infinite;
+            margin-bottom: 20px;
+            letter-spacing: 5px;
+            text-transform: uppercase;
+        }
+
+        .glitch-title::before, .glitch-title::after {
+            content: attr(data-text);
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        }
+        .glitch-title::before {
+            left: 2px; text-shadow: -2px 0 var(--neon-pink); clip: rect(44px, 450px, 56px, 0);
+            animation: glitch-anim 5s infinite linear alternate-reverse;
+        }
+        .glitch-title::after {
+            left: -2px; text-shadow: -2px 0 var(--neon-cyan); clip: rect(44px, 450px, 56px, 0);
+            animation: glitch-anim2 5s infinite linear alternate-reverse;
+        }
+
+        .subtitle {
+            font-size: 1.5rem;
+            color: var(--neon-yellow);
+            margin-bottom: 30px;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--neon-yellow);
+            display: inline-block;
+            padding-bottom: 5px;
+        }
+
+        .content-wrapper {
+            min-height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .content-text {
+            font-family: 'VT323', monospace;
+            font-size: 1.3rem;
+            line-height: 1.6;
+            color: #ddd;
+            text-shadow: 0 0 5px rgba(255,255,255,0.3);
+            text-align: left;
+            white-space: pre-wrap;
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 10px; height: 1.3rem;
+            background-color: var(--neon-cyan);
+            animation: blink 1s step-end infinite;
+            vertical-align: middle; margin-left: 5px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .stat-box {
+            background: rgba(0, 243, 255, 0.05);
+            border: 1px solid var(--neon-cyan);
+            padding: 15px;
+            transition: all 0.3s ease;
+            /* 独立的悬停效果，不受父级 tilt 影响太多 */
+            transform: translateZ(10px); 
+        }
+        .stat-box:hover {
+            background: var(--neon-cyan);
+            color: #000;
+            box-shadow: 0 0 25px var(--neon-cyan);
+            transform: translateZ(20px) scale(1.05); /* 悬停时突起 */
+        }
+
+        .stat-label { display: block; font-size: 0.8rem; letter-spacing: 1px; margin-bottom: 5px; opacity: 0.8; }
+        
+        .stat-value {
+            display: block;
+            font-family: 'VT323', monospace;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--neon-pink);
+            text-shadow: 0 0 5px var(--neon-pink);
+            min-height: 30px;
+        }
+
+        .terminal-line {
+            margin-top: 30px;
+            font-family: 'VT323', monospace;
+            color: var(--neon-pink);
+            font-size: 1.1rem;
+        }
+
+        @keyframes glitch-skew {
+            0% { transform: skew(0deg); } 20% { transform: skew(-2deg); }
+            40% { transform: skew(2deg); } 60% { transform: skew(0deg); }
+            80% { transform: skew(1deg); } 100% { transform: skew(0deg); }
+        }
+        @keyframes glitch-anim { 0% { clip: rect(24px, 9999px, 81px, 0); } 100% { clip: rect(14px, 9999px, 23px, 0); } }
+        @keyframes glitch-anim2 { 0% { clip: rect(65px, 9999px, 23px, 0); } 100% { clip: rect(22px, 9999px, 45px, 0); } }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+        @media (max-width: 600px) {
+            .glitch-title { font-size: 2.5rem; }
+            .cyber-card { width: 95%; padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bg-grid" id="grid-layer"></div>
+    
+    <div class="scanlines"></div>
+
+    <div class="cyber-card" id="tilt-card">
+        <div class="holo-glare"></div> <div class="corner-decoration"></div>
+        
+        <div class="content-layer">
+            <h1 class="glitch-title" data-text="BUFANXU">BUFANXU</h1>
+            <div class="subtitle">System Architect // Legend</div>
+            
+            <div class="content-wrapper">
+                <div class="content-text"><span id="typewriter"></span><span class="cursor"></span></div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <span class="stat-label">INTELLIGENCE</span>
+                    <span class="stat-value" data-target="∞_LIMITLESS">00000</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">CODING</span>
+                    <span class="stat-value" data-target="GOD_MODE">INIT...</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">CHARISMA</span>
+                    <span class="stat-value" data-target="OVERLOAD">PENDING</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">STATUS</span>
+                    <span class="stat-value" data-target="LEGENDARY">UNKNOWN</span>
+                </div>
+            </div>
+
+            <div class="terminal-line">
+                > SYSTEM STATUS: <span id="status-msg">CONNECTING...</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. 3D 视差特效逻辑 ---
+        const card = document.getElementById('tilt-card');
+        const grid = document.getElementById('grid-layer');
+        const body = document.querySelector('body');
+
+        document.addEventListener('mousemove', (e) => {
+            // 计算鼠标在屏幕中的位置 (范围 -1 到 1)
+            let xAxis = (window.innerWidth / 2 - e.pageX) / (window.innerWidth / 2);
+            let yAxis = (window.innerHeight / 2 - e.pageY) / (window.innerHeight / 2);
+
+            // 卡片倾斜角度 (除以 25 减缓旋转速度)
+            let rotateY = xAxis * 10; // 左右倾斜
+            let rotateX = yAxis * -10; // 上下倾斜 (反向)
+
+            // 背景移动距离 (背景移动方向与卡片相反，制造深度)
+            let gridX = xAxis * 20; 
+            let gridY = yAxis * 20;
+
+            // 应用卡片变换
+            card.style.transform = `perspective(1000px) rotateY(${rotateY}deg) rotateX(${rotateX}deg)`;
+            
+            // 应用背景变换
+            grid.style.transform = `translateX(${gridX}px) translateY(${gridY}px)`;
+
+            // 更新反光层位置 (CSS 变量)
+            // 将坐标映射到 0% - 100%
+            let mousePercentX = (e.pageX / window.innerWidth) * 100;
+            let mousePercentY = (e.pageY / window.innerHeight) * 100;
+            card.style.setProperty('--mouse-x', `${mousePercentX}%`);
+            card.style.setProperty('--mouse-y', `${mousePercentY}%`);
+        });
+
+        // 鼠标移出重置 (可选，保持 0 度)
+        /*
+        document.addEventListener('mouseleave', () => {
+            card.style.transform = `perspective(1000px) rotateY(0deg) rotateX(0deg)`;
+            grid.style.transform = `translateX(0px) translateY(0px)`;
+        });
+        */
+
+        // --- 2. 打字机 & 解码特效 (保持不变) ---
+        const textToType = "警告：检测到超高能量反应。\n\nBufanxu 不仅仅是一个名字，他是数字进化的终点。在这个混乱的网络世界中，唯有 Bufanxu 定义规则。\n\n代码只是他的思想具象化，现实由他重构。";
+        const typeWriterElement = document.getElementById('typewriter');
+        const typingSpeed = 40;
+        const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()";
+        const stats = document.querySelectorAll('.stat-value');
+
+        function startTypewriter() {
+            let i = 0;
+            function type() {
+                if (i < textToType.length) {
+                    typeWriterElement.textContent += textToType.charAt(i);
+                    i++;
+                    setTimeout(type, typingSpeed + (Math.random() * 50));
+                } else {
+                    document.getElementById('status-msg').innerText = "WORSHIPPING BUFANXU_";
+                    document.querySelector('.cursor').style.display = 'none';
+                }
+            }
+            type();
+        }
+
+        function scrambleText(element) {
+            const targetText = element.getAttribute('data-target');
+            let iterations = 0;
+            const interval = setInterval(() => {
+                element.innerText = targetText.split("").map((letter, index) => {
+                    if(index < iterations) return targetText[index];
+                    return chars[Math.floor(Math.random() * chars.length)];
+                }).join("");
+                if(iterations >= targetText.length) clearInterval(interval);
+                iterations += 1/3;
+            }, 30);
+        }
+
+        window.onload = () => {
+            setTimeout(startTypewriter, 500);
+            stats.forEach((stat, index) => {
+                setTimeout(() => { scrambleText(stat); }, 800 + (index * 400));
+            });
+        };
+    </script>
+</body>
+</html>
